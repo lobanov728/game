@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
+	"image"
 	"image/color"
 	"log"
 
@@ -69,13 +72,44 @@ func (g *Game) Update() error {
 	return nil
 }
 
+var (
+	tilesImage *ebiten.Image
+)
+
+var (
+	//go:embed sprites/floor_1.png
+	Tiles_png []byte
+)
+
+func init() {
+	// Decode an image from the image file's byte slice.
+	img, _, err := image.Decode(bytes.NewReader(Tiles_png))
+	if err != nil {
+		log.Fatal(err)
+	}
+	tilesImage = ebiten.NewImageFromImage(img)
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
+	shadowImage := ebiten.NewImage(320, 240)
+	shadowImage.Fill(color.Black)
+	unitImage := ebiten.NewImage(320, 240)
+	triangleImage := ebiten.NewImage(320, 240)
+	smallWhiteImage := ebiten.NewImage(320, 240)
+	smallWhiteImage.Fill(color.Black)
+
 	frame++
 
-	// img, _, _ := ebitenutil.NewImageFromFile("sprites/background.png")
-	// screen.DrawImage(img, nil)
-	for _, tile := range world.Tiles {
+	// for x := 0; x < 40; x++ {
+	// 	for y := 0; y < 30; y++ {
+	// 		drawOptions := &ebiten.DrawImageOptions{}
+	// 		drawOptions.GeoM.Translate(float64(x*16), float64(y*16))
 
+	// 		screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, 16, 16)).(*ebiten.Image), drawOptions)
+	// 	}
+	// }
+
+	for _, tile := range world.Tiles {
 		img, _, _ := ebitenutil.NewImageFromFile(
 			fmt.Sprintf("sprites/%s.png", tile.SpriteName),
 		)
@@ -120,35 +154,27 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		drawOptions := &ebiten.DrawImageOptions{}
 		drawOptions.GeoM.Translate(unit.X, unit.Y)
 
-		screen.DrawImage(img, drawOptions)
+		unitImage.DrawImage(img, drawOptions)
 
 		if unit.ID == world.MyID {
-			playerX, playerY = unit.X, unit.Y
-			rays = game.RayCasting(unit.X+8, unit.Y+16, 100, world.Objects)
+			playerX, playerY = unit.X+8, unit.Y+16
 		}
 	}
 
-	triangleImage := ebiten.NewImage(320, 240)
-	triangleImage.Fill(color.White)
-	opt := &ebiten.DrawTrianglesOptions{}
-	// opt.Address = ebiten.AddressRepeat
-	// opt.Blend = ebiten.BlendSourceOut
-	for i, line := range rays {
-		if i+1 == len(rays) {
-			// break
-		}
-		nextLine := rays[(i+1)%len(rays)]
-
-		v := game.RayVertices(
-			playerX+8, playerY+16,
-			nextLine.X2, nextLine.Y2,
-			line.X2, line.Y2,
-		)
-		screen.DrawTriangles(v, []uint16{0, 1, 2}, triangleImage, opt)
+	var objects []game.Pointable
+	for _, obj := range world.Objects {
+		objects = append(objects, obj)
 	}
 
-	for i, l := range rays {
-		fmt.Println("i x2, y2 angle", i, l.X2, l.Y2, l.Angle())
+	playerBox := &game.Unit{
+		ID:  "",
+		X:   playerX,
+		Y:   playerY,
+		Box: game.NewCircleBox(playerX, playerY, 50),
+	}
+
+	objects = append(objects, playerBox)
+	for i, l := range playerBox.Box {
 		vector.StrokeLine(
 			screen,
 			float32(l.X1),
@@ -160,99 +186,44 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			true,
 		)
 	}
+	rays = game.RayCasting(playerX, playerY, 1000, objects, playerBox)
 
-	shadowImage := ebiten.NewImage(100, 100)
+	opt := &ebiten.DrawTrianglesOptions{}
+	// opt.Address = ebiten.AddressRepeat
+	// opt.Blend = ebiten.BlendDestinationIn
+	for i, line := range rays {
+		nextLine := rays[(i+1)%len(rays)]
 
-	shadowImage.Fill(color.Black)
+		v := game.RayVertices(
+			playerX, playerY,
+			nextLine.X2, nextLine.Y2,
+			line.X2, line.Y2,
+		)
+		// shadowImage.DrawTriangles(v, []uint16{0, 1, 2}, triangleImage, opt)
+		triangleImage.DrawTriangles(v, []uint16{0, 1, 2}, smallWhiteImage, opt)
+	}
 
-	circle := ebiten.NewImage(100, 100)
-	circle.Fill(color.White)
+	offscreen := ebiten.NewImage(320, 240)
 
-	opt = &ebiten.DrawTrianglesOptions{}
-	opt.Address = ebiten.AddressRepeat
-	opt.Blend = ebiten.BlendSourceOut
-	vector.DrawFilledCircle(shadowImage, 50, 50, 50, color.White, true)
-	// shadowImage.DrawTriangles([]ebiten.Vertex{
-	// 	{
-	// 		DstX:   30,
-	// 		DstY:   30,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// 	{
-	// 		DstX:   30,
-	// 		DstY:   50,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// 	{
-	// 		DstX:   90,
-	// 		DstY:   90,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// 	{
-	// 		DstX:   50,
-	// 		DstY:   90,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// 	{
-	// 		DstX:   5,
-	// 		DstY:   90,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// 	{
-	// 		DstX:   5,
-	// 		DstY:   5,
-	// 		SrcX:   0,
-	// 		SrcY:   0,
-	// 		ColorR: 1,
-	// 		ColorG: 1,
-	// 		ColorB: 1,
-	// 		ColorA: 1,
-	// 	},
-	// }, []uint16{
-	// 	0,
-	// 	1,
-	// 	2,
-	// 	3,
-	// 	4,
-	// 	5,
-	// },
-	// 	circle,
-	// 	opt)
+	shadowImageOpt := &ebiten.DrawImageOptions{}
+	shadowImageOpt.ColorScale.ScaleAlpha(0.5)
+	offscreen.DrawImage(shadowImage, shadowImageOpt)
 
-	op := &ebiten.DrawImageOptions{}
-	op.ColorScale.ScaleAlpha(0.7)
-	screen.DrawImage(shadowImage, op)
+	unitImageOpt := &ebiten.DrawImageOptions{}
+	unitImageOpt.Blend = ebiten.BlendSourceIn
+	triangleImage.DrawImage(unitImage, unitImageOpt)
+
+	triangleImageOpt := &ebiten.DrawImageOptions{}
+	// triangleImageOpt.Blend = ebiten.BlendDestinationOut
+	offscreen.DrawImage(triangleImage, triangleImageOpt)
+
+	screen.DrawImage(offscreen, nil)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()), 51, 51)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 240
+	return 640, 480
 }
 
 func main() {
@@ -271,6 +242,7 @@ func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle(" Hello world ")
 	if err := ebiten.RunGame(&Game{conn: c}); err != nil {
+		// if err := ebiten.RunGame(&Game{conn:c nil}); err != nil {
 		log.Fatal(err)
 	}
 }

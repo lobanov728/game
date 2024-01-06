@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type Unit struct {
@@ -35,6 +36,10 @@ func (u *Unit) Points() [][2]float64 {
 	return points
 }
 
+func (u *Unit) GetBox() []Line {
+	return u.Box
+}
+
 func NewRectBox(x, y, w, h float64) []Line {
 	return []Line{
 		{x, y, x, y + h},
@@ -42,6 +47,20 @@ func NewRectBox(x, y, w, h float64) []Line {
 		{x + w, y + h, x + w, y},
 		{x + w, y, x, y},
 	}
+}
+
+func NewCircleBox(x, y, r float64) []Line {
+	var path vector.Path
+	path.Arc(float32(x), float32(y), float32(r), 0, 2*math.Pi, vector.Clockwise)
+	vs, _ := path.AppendVerticesAndIndicesForFilling(nil, nil)
+
+	var res []Line
+	for i := 0; i < len(vs)-1; i++ {
+		nextLine := vs[i+1]
+		res = append(res, Line{float64(vs[i].DstX), float64(vs[i].DstY), float64(nextLine.DstX), float64(nextLine.DstY)})
+	}
+
+	return res
 }
 
 type Line struct {
@@ -121,6 +140,7 @@ const (
 )
 
 func (world *World) HandleEvent(event *Event) {
+
 	switch event.Type {
 	case PlayerEventConnect:
 		str, _ := json.Marshal(event.Data)
@@ -150,14 +170,14 @@ func (world *World) HandleEvent(event *Event) {
 
 		switch ev.Direction {
 		case DirectionUp:
-			unit.Y--
+			unit.Y -= 1.5
 		case DirectionDown:
-			unit.Y++
+			unit.Y += 1.5
 		case DirectionRight:
-			unit.X++
+			unit.X += 1.5
 			unit.HorizontalDirection = ev.Direction
 		case DirectionLeft:
-			unit.X--
+			unit.X -= 1.5
 			unit.HorizontalDirection = ev.Direction
 		}
 	case PlayerEventIdle:

@@ -34,13 +34,13 @@ func main() {
 		}
 	}
 
-	world.Objects["box"] = &game.Unit{
-		ID:         "box",
-		X:          10,
-		Y:          10,
-		SpriteName: "",
-		Box:        game.NewRectBox(10, 10, 300, 220),
-	}
+	// world.Objects["box"] = &game.Unit{
+	// 	ID:         "box",
+	// 	X:          10,
+	// 	Y:          10,
+	// 	SpriteName: "",
+	// 	Box:        game.NewRectBox(10, 10, 300, 220),
+	// }
 
 	world.Objects["door"] = &game.Unit{
 		ID:         "door",

@@ -7,6 +7,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+type Pointable interface {
+	Points() [][2]float64
+	GetBox() []Line
+}
+
 func NewRay(x, y, length, angle float64) Line {
 	return Line{
 		X1: x,
@@ -41,8 +46,9 @@ func intersection(l1, l2 Line) (float64, float64, bool) {
 	return x, y, true
 }
 
-func RayCasting(cx, cy, rayLength float64, objects Objects) []Line {
+func RayCasting(cx, cy, rayLength float64, objects []Pointable, playerBox Pointable) []Line {
 	var rays []Line
+
 	for _, obj := range objects {
 		for _, p := range obj.Points() {
 			l := Line{cx, cy, p[0], p[1]}
@@ -50,30 +56,61 @@ func RayCasting(cx, cy, rayLength float64, objects Objects) []Line {
 			for _, angleOffset := range []float64{-0.0005, 0.0005} {
 				points := [][2]float64{}
 				ray := NewRay(cx, cy, rayLength, angle+angleOffset)
-				// rays = append(rays, ray)
 				for _, o := range objects {
-					for _, line := range o.Box {
+					for _, line := range o.GetBox() {
 						if px, py, ok := intersection(ray, line); ok {
 							points = append(points, [2]float64{px, py})
 						}
 					}
 				}
 
-				if len(points) > 0 {
-					min := math.Inf(1)
-					minI := -1
-					for i, p := range points {
-						d2 := (cx-p[0])*(cx-p[0]) + (cy-p[1])*(cy-p[1])
-						if d2 < min {
-							min = d2
-							minI = i
-						}
+				min := math.Inf(1)
+				minI := -1
+				for i, p := range points {
+					d2 := (cx-p[0])*(cx-p[0]) + (cy-p[1])*(cy-p[1])
+					if d2 < min {
+						min = d2
+						minI = i
 					}
+				}
 
-					rays = append(rays, Line{cx, cy, points[minI][0], points[minI][1]})
+				rays = append(rays, Line{cx, cy, points[minI][0], points[minI][1]})
+			}
+		}
+	}
+
+	for _, playerLine := range playerBox.GetBox() {
+		points := [][2]float64{}
+
+		for _, o := range objects {
+			for _, line := range o.GetBox() {
+				if px, py, ok := intersection(playerLine, line); ok {
+					points = append(points, [2]float64{px, py})
 				}
 			}
 		}
+
+		min := math.Inf(1)
+		minI := -1
+		for i, p := range points {
+			d2 := (cx-p[0])*(cx-p[0]) + (cy-p[1])*(cy-p[1])
+			if d2 < min {
+				min = d2
+				minI = i
+			}
+		}
+
+		ray := Line{cx, cy, points[minI][0], points[minI][1]}
+		for _, o := range objects {
+			for _, line := range o.GetBox() {
+				if px, py, ok := intersection(ray, line); ok {
+					points = append(points, [2]float64{px, py})
+					ray = Line{cx, cy, px, py}
+				}
+			}
+		}
+
+		rays = append(rays, ray)
 	}
 
 	sort.Slice(rays, func(i, j int) bool {
