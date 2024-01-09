@@ -94,9 +94,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	shadowImage := ebiten.NewImage(320, 240)
 	shadowImage.Fill(color.Black)
 	unitImage := ebiten.NewImage(320, 240)
+	unitSightImage := ebiten.NewImage(320, 240)
 	triangleImage := ebiten.NewImage(320, 240)
 	smallWhiteImage := ebiten.NewImage(320, 240)
-	smallWhiteImage.Fill(color.Black)
+	smallWhiteImage1 := ebiten.NewImage(320, 240)
+	smallWhiteImage1.Fill(color.White)
+	smallWhiteImage.Fill(color.White)
 
 	frame++
 
@@ -188,7 +191,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	rays = game.RayCasting(playerX, playerY, 1000, objects, playerBox)
 
-	opt := &ebiten.DrawTrianglesOptions{}
+	// opt := &ebiten.DrawTrianglesOptions{}
 	// opt.Address = ebiten.AddressRepeat
 	// opt.Blend = ebiten.BlendDestinationIn
 	for i, line := range rays {
@@ -199,24 +202,36 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			nextLine.X2, nextLine.Y2,
 			line.X2, line.Y2,
 		)
-		// shadowImage.DrawTriangles(v, []uint16{0, 1, 2}, triangleImage, opt)
-		triangleImage.DrawTriangles(v, []uint16{0, 1, 2}, smallWhiteImage, opt)
+		unitSightImage.DrawTriangles(v, []uint16{0, 1, 2}, smallWhiteImage1, nil)
+		triangleImage.DrawTriangles(v, []uint16{0, 1, 2}, smallWhiteImage, nil)
 	}
 
 	offscreen := ebiten.NewImage(320, 240)
 
 	shadowImageOpt := &ebiten.DrawImageOptions{}
 	shadowImageOpt.ColorScale.ScaleAlpha(0.5)
+	triangleImageOpt := &ebiten.DrawImageOptions{}
+	triangleImageOpt.Blend = ebiten.BlendDestinationOut
+	shadowImage.DrawImage(triangleImage, triangleImageOpt)
+
+	//
+	// triangleImage.DrawImage(unitImage, unitImageOpt)
+
+	// triangleImageOpt := &ebiten.DrawImageOptions{}
+	// triangleImageOpt.Blend = ebiten.BlendSourceOver
+	// shadowImage.DrawImage(triangleImage, triangleImageOpt)
+	// shadowImage.DrawImage(triangleImage, triangleImageOpt)
+
+	unitScreen := ebiten.NewImage(320, 240)
+	unitImageOpt := &ebiten.DrawImageOptions{}
+	unitImageOpt.Blend = ebiten.BlendDestinationIn
+	unitImage.DrawImage(unitSightImage, unitImageOpt)
+
+	unitScreen.DrawImage(unitImage, nil)
+
 	offscreen.DrawImage(shadowImage, shadowImageOpt)
 
-	unitImageOpt := &ebiten.DrawImageOptions{}
-	unitImageOpt.Blend = ebiten.BlendSourceIn
-	triangleImage.DrawImage(unitImage, unitImageOpt)
-
-	triangleImageOpt := &ebiten.DrawImageOptions{}
-	// triangleImageOpt.Blend = ebiten.BlendDestinationOut
-	offscreen.DrawImage(triangleImage, triangleImageOpt)
-
+	screen.DrawImage(unitScreen, nil)
 	screen.DrawImage(offscreen, nil)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()), 51, 51)
