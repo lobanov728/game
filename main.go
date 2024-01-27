@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/lobanov728/mud/game"
 
 	"github.com/gorilla/websocket"
@@ -24,9 +25,12 @@ type Game struct {
 	conn *websocket.Conn
 }
 
+var totalDown = 0
+
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		g.conn.WriteJSON(game.Event{
+			ID:   uuid.New().String(),
 			Type: game.PlayerEventMove,
 			Data: game.PlayerMove{
 				UnitID:    world.MyID,
@@ -35,7 +39,10 @@ func (g *Game) Update() error {
 		})
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		totalDown++
+		fmt.Println("totalDown", totalDown)
 		g.conn.WriteJSON(game.Event{
+			ID:   uuid.New().String(),
 			Type: game.PlayerEventMove,
 			Data: game.PlayerMove{
 				UnitID:    world.MyID,
@@ -45,6 +52,7 @@ func (g *Game) Update() error {
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		g.conn.WriteJSON(game.Event{
+			ID:   uuid.New().String(),
 			Type: game.PlayerEventMove,
 			Data: game.PlayerMove{
 				UnitID:    world.MyID,
@@ -54,6 +62,7 @@ func (g *Game) Update() error {
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
 		g.conn.WriteJSON(game.Event{
+			ID:   uuid.New().String(),
 			Type: game.PlayerEventMove,
 			Data: game.PlayerMove{
 				UnitID:    world.MyID,
@@ -61,8 +70,9 @@ func (g *Game) Update() error {
 			},
 		})
 	}
-	if world.Units[world.MyID].Action == game.ActionRun {
+	if world.Units[world.MyID].Action == game.ActionIdle {
 		g.conn.WriteJSON(game.Event{
+			ID:   uuid.New().String(),
 			Type: game.PlayerEventIdle,
 			Data: game.PlayerMove{
 				UnitID: world.MyID,
@@ -103,14 +113,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	frame++
 
-	// for x := 0; x < 40; x++ {
-	// 	for y := 0; y < 30; y++ {
-	// 		drawOptions := &ebiten.DrawImageOptions{}
-	// 		drawOptions.GeoM.Translate(float64(x*16), float64(y*16))
+	for x := 0; x < 20; x++ {
+		for y := 0; y < 15; y++ {
+			drawOptions := &ebiten.DrawImageOptions{}
+			drawOptions.GeoM.Translate(float64(x*16), float64(y*16))
 
-	// 		screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, 16, 16)).(*ebiten.Image), drawOptions)
-	// 	}
-	// }
+			screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, 16, 16)).(*ebiten.Image), drawOptions)
+		}
+	}
 
 	for _, tile := range world.Tiles {
 		img, _, _ := ebitenutil.NewImageFromFile(
@@ -160,7 +170,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		unitImage.DrawImage(img, drawOptions)
 
 		if unit.ID == world.MyID {
+			fmt.Println("player", unit.SpriteName, unit.X, unit.Y)
 			playerX, playerY = unit.X+8, unit.Y+16
+		} else {
+			// fmt.Println(unit)
 		}
 	}
 
@@ -173,7 +186,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ID:  "",
 		X:   playerX,
 		Y:   playerY,
-		Box: game.NewCircleBox(playerX, playerY, 50),
+		Box: game.NewCircleBox(playerX, playerY, 80),
 	}
 
 	objects = append(objects, playerBox)
@@ -243,21 +256,21 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 	c, _, _ := websocket.DefaultDialer.Dial("ws://127.0.0.1:3000/ws", nil)
-
-	go func(c *websocket.Conn) {
-		defer c.Close()
-
+	defer c.Close()
+	go func() {
 		for {
 			var event game.Event
-			c.ReadJSON(&event)
+			err := c.ReadJSON(&event)
+			if err != nil {
+				fmt.Println("err", err)
+			}
 			world.HandleEvent(&event)
 		}
-	}(c)
+	}()
 
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle(" Hello world ")
 	if err := ebiten.RunGame(&Game{conn: c}); err != nil {
-		// if err := ebiten.RunGame(&Game{conn:c nil}); err != nil {
 		log.Fatal(err)
 	}
 }

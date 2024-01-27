@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -46,11 +48,11 @@ func (c *Client) readPump(world *game.World) {
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
-	})
+	// c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	// c.conn.SetPongHandler(func(string) error {
+	// 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	// 	return nil
+	// })
 
 	for {
 		_, message, err := c.conn.ReadMessage()
@@ -80,7 +82,8 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			fmt.Println("<-c.send", string(message))
+			// c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -94,11 +97,11 @@ func (c *Client) writePump() {
 
 			w.Write(message)
 
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newLine)
-				w.Write(<-c.send)
-			}
+			// n := len(c.send)
+			// for i := 0; i < n; i++ {
+			// 	w.Write(newLine)
+			// 	w.Write(<-c.send)
+			// }
 
 			if err := w.Close(); err != nil {
 				return
@@ -107,7 +110,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func handleConnection(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request) {
+func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -139,6 +142,58 @@ func handleConnection(hub *Hub, world *game.World, w http.ResponseWriter, r *htt
 		},
 	})
 	hub.broadcast <- message
+
+	go func() {
+		for {
+			targetUnit := &game.Unit{}
+			for id := range world.Units {
+				if id != "mob" {
+					targetUnit = world.Units[id]
+				}
+			}
+			if targetUnit.ID != "" {
+				for id := range world.Units {
+					if id == "mob" {
+						fmt.Println("target", targetUnit.X, targetUnit.Y, targetUnit.ID)
+						fmt.Println("mob", world.Units[id].X, world.Units[id].Y)
+						difX := world.Units[id].X - targetUnit.X
+						difY := world.Units[id].Y - targetUnit.Y
+						var direction int
+						fmt.Println("x", difX)
+						fmt.Println("y", difY)
+						if math.Abs(difX) >= math.Abs(difY) {
+							if difX >= 0 {
+								direction = game.DirectionLeft
+							} else {
+								direction = game.DirectionRight
+							}
+						} else {
+							if difY >= 0 {
+								direction = game.DirectionUp
+							} else {
+								direction = game.DirectionDown
+							}
+						}
+
+						if direction != 0 {
+							ev := game.Event{
+								Type: game.PlayerEventMove,
+								Data: game.PlayerMove{
+									UnitID:    id,
+									Direction: direction,
+								},
+							}
+							message, _ := json.Marshal(ev)
+							hub.broadcast <- message
+
+							world.HandleEvent(&ev)
+						}
+					}
+				}
+				time.Sleep(time.Millisecond * 70)
+			}
+		}
+	}()
 
 	go client.writePump()
 	go client.readPump(world)

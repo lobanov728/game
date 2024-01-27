@@ -98,6 +98,7 @@ type World struct {
 }
 
 type Event struct {
+	ID   string      `json:"id"`
 	Type string      `json:"type"`
 	Data interface{} `json:"data"`
 }
@@ -133,14 +134,13 @@ const (
 )
 
 const (
-	DirectionUp = iota
+	DirectionUp = iota + 1
 	DirectionRight
 	DirectionDown
 	DirectionLeft
 )
 
 func (world *World) HandleEvent(event *Event) {
-
 	switch event.Type {
 	case PlayerEventConnect:
 		str, _ := json.Marshal(event.Data)

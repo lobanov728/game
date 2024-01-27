@@ -20,6 +20,27 @@ func main() {
 
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 
+	skins := []string{
+		"big_demon", "big_zombie",
+		"goblin", "ice_zombie",
+		"imp", "muddy",
+		"ogre", "necromancer",
+		"orc_shaman", "orc_warrior",
+		"masked_orc", "orc_warrior",
+	}
+
+	for i := 0; i < 1; i++ {
+		id := game.UnitID(uuid.New().String())
+		world.Units["mob"] = &game.Unit{
+			ID:         id,
+			X:          float64(16 * i),
+			Y:          16,
+			SpriteName: skins[rnd.Intn(len(skins))],
+			Action:     game.ActionIdle,
+			Frame:      0,
+		}
+	}
+
 	for x := 0; x < 20; x++ {
 		for y := 0; y < 15; y++ {
 			id := game.UnitID(uuid.New().String())
@@ -34,13 +55,13 @@ func main() {
 		}
 	}
 
-	// world.Objects["box"] = &game.Unit{
-	// 	ID:         "box",
-	// 	X:          10,
-	// 	Y:          10,
-	// 	SpriteName: "",
-	// 	Box:        game.NewRectBox(10, 10, 300, 220),
-	// }
+	world.Objects["box"] = &game.Unit{
+		ID:         "box",
+		X:          10,
+		Y:          10,
+		SpriteName: "",
+		Box:        game.NewRectBox(10, 10, 300, 220),
+	}
 
 	world.Objects["door"] = &game.Unit{
 		ID:         "door",
@@ -62,9 +83,10 @@ func main() {
 	go hub.run()
 
 	r := gin.New()
+	gin.SetMode(gin.ReleaseMode)
 	r.GET("/ws", func(hub *Hub, world *game.World) gin.HandlerFunc {
 		return gin.HandlerFunc(func(c *gin.Context) {
-			handleConnection(hub, world, c.Writer, c.Request)
+			initPlayerConnection(hub, world, c.Writer, c.Request)
 		})
 	}(hub, world))
 
