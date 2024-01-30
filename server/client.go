@@ -161,28 +161,42 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 						var direction int
 						fmt.Println("x", difX)
 						fmt.Println("y", difY)
-						if math.Abs(difX) >= math.Abs(difY) {
-							if difX >= 0 {
-								direction = game.DirectionLeft
-							} else {
-								direction = game.DirectionRight
+						var ev game.Event
+
+						if math.Abs(difX) <= 9 && math.Abs(difY) <= 9 {
+							ev = game.Event{
+								Type: game.ActionHit,
+								Data: game.Hit{
+									ToUnitID:   targetUnit.ID,
+									FromUnitID: id,
+								},
 							}
 						} else {
-							if difY >= 0 {
-								direction = game.DirectionUp
+							if math.Abs(difX) >= math.Abs(difY) {
+								if difX >= 9 {
+									direction = game.DirectionLeft
+								} else {
+									direction = game.DirectionRight
+								}
 							} else {
-								direction = game.DirectionDown
+								if difY >= 9 {
+									direction = game.DirectionUp
+								} else {
+									direction = game.DirectionDown
+								}
+							}
+							if direction != 0 {
+								ev = game.Event{
+									Type: game.PlayerEventMove,
+									Data: game.PlayerMove{
+										UnitID:    id,
+										Direction: direction,
+									},
+								}
 							}
 						}
 
-						if direction != 0 {
-							ev := game.Event{
-								Type: game.PlayerEventMove,
-								Data: game.PlayerMove{
-									UnitID:    id,
-									Direction: direction,
-								},
-							}
+						if ev.Type != "" {
 							message, _ := json.Marshal(ev)
 							hub.broadcast <- message
 

@@ -19,6 +19,7 @@ type Unit struct {
 	Frame               int     `json:"frame"`
 	HorizontalDirection int     `json:"direction"`
 	Box                 []Line  `json:"line"`
+	HitPoints           int     `json:"hit_points"`
 }
 
 func (u *Unit) Points() [][2]float64 {
@@ -112,6 +113,11 @@ type PlayerMove struct {
 	Direction int    `json:"direction"`
 }
 
+type Hit struct {
+	ToUnitID   UnitID `json:"to_unit_id"`
+	FromUnitID UnitID `json:"from_unit_id"`
+}
+
 type PlayerIdle struct {
 	UnitID UnitID `json:"unit_id"`
 }
@@ -130,6 +136,7 @@ const (
 	PlayerEventInit    = "init"
 
 	ActionRun  = "run"
+	ActionHit  = "hit"
 	ActionIdle = "idle"
 )
 
@@ -187,6 +194,12 @@ func (world *World) HandleEvent(event *Event) {
 
 		unit := world.Units[ev.UnitID]
 		unit.Action = ActionIdle
+	case ActionHit:
+		str, _ := json.Marshal(event.Data)
+		var ev Hit
+		json.Unmarshal(str, &ev)
+
+		world.Units[ev.ToUnitID].HitPoints = world.Units[ev.ToUnitID].HitPoints - 1
 	}
 }
 
@@ -206,6 +219,7 @@ func (world *World) AddPlayer() *Unit {
 		SpriteName: skins[rnd.Intn(len(skins))],
 		Action:     ActionIdle,
 		Frame:      rnd.Intn(4),
+		HitPoints:  10,
 	}
 	world.Units[UnitID(id)] = unit
 

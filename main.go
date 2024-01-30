@@ -158,6 +158,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	var rays []game.Line
+	var playerHitPoints int
 	var playerX, playerY float64
 
 	for _, unit := range world.Units {
@@ -172,6 +173,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if unit.ID == world.MyID {
 			fmt.Println("player", unit.SpriteName, unit.X, unit.Y)
 			playerX, playerY = unit.X+8, unit.Y+16
+			playerHitPoints = unit.HitPoints
 		} else {
 			// fmt.Println(unit)
 		}
@@ -248,6 +250,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(offscreen, nil)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()), 51, 51)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Hit points: %d", playerHitPoints), 51, 31)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
