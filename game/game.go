@@ -11,15 +11,20 @@ import (
 )
 
 type Unit struct {
-	ID                  UnitID  `json:"id"`
-	X                   float64 `json:"x"`
-	Y                   float64 `json:"y"`
-	SpriteName          string  `json:"sprite_name"`
-	Action              string  `json:"action"`
-	Frame               int     `json:"frame"`
-	HorizontalDirection int     `json:"direction"`
-	Box                 []Line  `json:"line"`
-	HitPoints           int     `json:"hit_points"`
+	ID                  UnitID    `json:"id"`
+	X                   float64   `json:"x"`
+	Y                   float64   `json:"y"`
+	SpriteName          string    `json:"sprite_name"`
+	Action              EventName `json:"action"`
+	Frame               int       `json:"frame"`
+	HorizontalDirection int       `json:"direction"`
+	Box                 []Line    `json:"line"`
+	HitPoints           int       `json:"hit_points"`
+	Actions             map[EventName]*Action
+}
+
+func (u *Unit) CouldMakeAction(name EventName) bool {
+	return false
 }
 
 func (u *Unit) Points() [][2]float64 {
@@ -76,12 +81,12 @@ func (l *Line) Angle() float64 {
 }
 
 type Tile struct {
-	ID         UnitID  `json:"id"`
-	X          float64 `json:"x"`
-	Y          float64 `json:"y"`
-	SpriteName string  `json:"sprite_name"`
-	Action     string  `json:"action"`
-	Frame      int     `json:"frame"`
+	ID         UnitID    `json:"id"`
+	X          float64   `json:"x"`
+	Y          float64   `json:"y"`
+	SpriteName string    `json:"sprite_name"`
+	Action     EventName `json:"action"`
+	Frame      int       `json:"frame"`
 }
 
 type UnitID string
@@ -100,7 +105,7 @@ type World struct {
 
 type Event struct {
 	ID   string      `json:"id"`
-	Type string      `json:"type"`
+	Type EventName   `json:"type"`
 	Data interface{} `json:"data"`
 }
 
@@ -129,15 +134,17 @@ type PlayerInit struct {
 	Objects  Objects `json:"objects"`
 }
 
-const (
-	PlayerEventConnect = "connect"
-	PlayerEventMove    = "move"
-	PlayerEventIdle    = "idle"
-	PlayerEventInit    = "init"
+type EventName string
 
-	ActionRun  = "run"
-	ActionHit  = "hit"
-	ActionIdle = "idle"
+const (
+	PlayerEventConnect EventName = "connect"
+	PlayerEventMove    EventName = "move"
+	PlayerEventIdle    EventName = "idle"
+	PlayerEventInit    EventName = "init"
+
+	ActionRun  EventName = "run"
+	ActionHit  EventName = "hit"
+	ActionIdle EventName = "idle"
 )
 
 const (

@@ -154,57 +154,67 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 			if targetUnit.ID != "" {
 				for id := range world.Units {
 					if id == "mob" {
+						mob := world.Units[id]
 						fmt.Println("target", targetUnit.X, targetUnit.Y, targetUnit.ID)
-						fmt.Println("mob", world.Units[id].X, world.Units[id].Y)
-						difX := world.Units[id].X - targetUnit.X
-						difY := world.Units[id].Y - targetUnit.Y
+						fmt.Println("mob", mob.X, mob.Y)
+						difX := mob.X - targetUnit.X
+						difY := mob.Y - targetUnit.Y
 						var direction int
 						fmt.Println("x", difX)
 						fmt.Println("y", difY)
-						var ev game.Event
 
-						if math.Abs(difX) <= 9 && math.Abs(difY) <= 9 {
-							ev = game.Event{
-								Type: game.ActionHit,
-								Data: game.Hit{
-									ToUnitID:   targetUnit.ID,
-									FromUnitID: id,
-								},
-							}
-						} else {
-							if math.Abs(difX) >= math.Abs(difY) {
-								if difX >= 9 {
-									direction = game.DirectionLeft
-								} else {
-									direction = game.DirectionRight
+						for _, action := range mob.Actions {
+							fmt.Println(action.GetName(), action.IsReady())
+							if action.IsReady() == 0 {
+								var ev game.Event
+								if action.GetName() == game.ActionHit && math.Abs(difX) <= 9 && math.Abs(difY) <= 9 {
+									ev = game.Event{
+										Type: game.ActionHit,
+										Data: game.Hit{
+											ToUnitID:   targetUnit.ID,
+											FromUnitID: id,
+										},
+									}
+								} else if action.GetName() == game.PlayerEventMove {
+									if math.Abs(difX) >= math.Abs(difY) {
+										if difX >= 9 {
+											direction = game.DirectionLeft
+										}
+										if difX <= -9 {
+											direction = game.DirectionRight
+										}
+									} else {
+										if difY >= 9 {
+											direction = game.DirectionUp
+										}
+										if difY <= -9 {
+											direction = game.DirectionDown
+										}
+									}
+									if direction != 0 {
+										ev = game.Event{
+											Type: game.PlayerEventMove,
+											Data: game.PlayerMove{
+												UnitID:    id,
+												Direction: direction,
+											},
+										}
+
+									}
 								}
-							} else {
-								if difY >= 9 {
-									direction = game.DirectionUp
-								} else {
-									direction = game.DirectionDown
-								}
-							}
-							if direction != 0 {
-								ev = game.Event{
-									Type: game.PlayerEventMove,
-									Data: game.PlayerMove{
-										UnitID:    id,
-										Direction: direction,
-									},
+
+								if ev.Type != "" {
+									message, _ := json.Marshal(ev)
+									hub.broadcast <- message
+
+									world.HandleEvent(&ev)
+									action.Fire()
 								}
 							}
 						}
-
-						if ev.Type != "" {
-							message, _ := json.Marshal(ev)
-							hub.broadcast <- message
-
-							world.HandleEvent(&ev)
-						}
+						time.Sleep(time.Millisecond * 50)
 					}
 				}
-				time.Sleep(time.Millisecond * 70)
 			}
 		}
 	}()

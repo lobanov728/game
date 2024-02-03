@@ -31,6 +31,11 @@ func main() {
 
 	for i := 0; i < 1; i++ {
 		id := game.UnitID(uuid.New().String())
+
+		actionMap := map[game.EventName]*game.Action{
+			game.ActionHit:       game.NewAction(game.ActionHit, time.Second),
+			game.PlayerEventMove: game.NewAction(game.PlayerEventMove, time.Millisecond*50),
+		}
 		world.Units["mob"] = &game.Unit{
 			ID:         id,
 			X:          float64(16 * i),
@@ -38,6 +43,7 @@ func main() {
 			SpriteName: skins[rnd.Intn(len(skins))],
 			Action:     game.ActionIdle,
 			Frame:      0,
+			Actions:    actionMap,
 		}
 	}
 
