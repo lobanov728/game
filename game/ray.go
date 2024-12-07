@@ -9,7 +9,7 @@ import (
 
 type Pointable interface {
 	Points() [][2]float64
-	GetBox() []Line
+	GetBox() Box
 }
 
 func NewRay(x, y, length, angle float64) Line {
@@ -21,7 +21,13 @@ func NewRay(x, y, length, angle float64) Line {
 	}
 }
 
-func intersection(l1, l2 Line) (float64, float64, bool) {
+func LineHasIntersection(l1, l2 Line) bool {
+	_, _, res := LineIntersection(l1, l2)
+
+	return res
+}
+
+func LineIntersection(l1, l2 Line) (float64, float64, bool) {
 	// https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
 	denom := (l1.X1-l1.X2)*(l2.Y1-l2.Y2) - (l1.Y1-l1.Y2)*(l2.X1-l2.X2)
 	tNum := (l1.X1-l2.X1)*(l2.Y1-l2.Y2) - (l1.Y1-l2.Y1)*(l2.X1-l2.X2)
@@ -58,7 +64,7 @@ func RayCasting(cx, cy, rayLength float64, objects []Pointable, playerBox Pointa
 				ray := NewRay(cx, cy, rayLength, angle+angleOffset)
 				for _, o := range objects {
 					for _, line := range o.GetBox() {
-						if px, py, ok := intersection(ray, line); ok {
+						if px, py, ok := LineIntersection(ray, line); ok {
 							points = append(points, [2]float64{px, py})
 						}
 					}
@@ -84,7 +90,7 @@ func RayCasting(cx, cy, rayLength float64, objects []Pointable, playerBox Pointa
 
 		for _, o := range objects {
 			for _, line := range o.GetBox() {
-				if px, py, ok := intersection(playerLine, line); ok {
+				if px, py, ok := LineIntersection(playerLine, line); ok {
 					points = append(points, [2]float64{px, py})
 				}
 			}
@@ -103,7 +109,7 @@ func RayCasting(cx, cy, rayLength float64, objects []Pointable, playerBox Pointa
 		ray := Line{cx, cy, points[minI][0], points[minI][1]}
 		for _, o := range objects {
 			for _, line := range o.GetBox() {
-				if px, py, ok := intersection(ray, line); ok {
+				if px, py, ok := LineIntersection(ray, line); ok {
 					points = append(points, [2]float64{px, py})
 					ray = Line{cx, cy, px, py}
 				}

@@ -145,23 +145,27 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 
 	go func() {
 		for {
-			targetUnit := &game.Unit{}
+			targetUnits := make([]*game.Unit, 0, 100)
 			for id := range world.Units {
 				if id != "mob" {
-					targetUnit = world.Units[id]
+					targetUnits = append(targetUnits, world.Units[id])
 				}
 			}
-			if targetUnit.ID != "" {
-				for id := range world.Units {
-					if id == "mob" {
+			for id := range world.Units {
+				if id == "mob" {
+					for i := range targetUnits {
+						targetUnit := targetUnits[i]
 						mob := world.Units[id]
+						targetVector := game.Line{
+							X1: mob.X,
+							Y1: mob.Y,
+							X2: targetUnit.X,
+							Y2: targetUnit.Y,
+						}
 						fmt.Println("target", targetUnit.X, targetUnit.Y, targetUnit.ID)
 						fmt.Println("mob", mob.X, mob.Y)
 						difX := mob.X - targetUnit.X
 						difY := mob.Y - targetUnit.Y
-						var direction int
-						fmt.Println("x", difX)
-						fmt.Println("y", difY)
 
 						for _, action := range mob.Actions {
 							fmt.Println(action.GetName(), action.IsReady())
@@ -176,27 +180,100 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 										},
 									}
 								} else if action.GetName() == game.PlayerEventMove {
-									if math.Abs(difX) >= math.Abs(difY) {
-										if difX >= 9 {
-											direction = game.DirectionLeft
+									var direction int
+									fmt.Println("difX", difX)
+									fmt.Println("difY", difY)
+									type interactionData struct {
+										x, y float64
+										line game.Line
+									}
+									interactions := make([]interactionData, 0)
+
+									newX := mob.X + game.StepSize*math.Cos(targetVector.Angle())
+									newY := mob.Y + game.StepSize*math.Sin(targetVector.Angle())
+									newBox := game.NewRectBox(newX, newY, mob.TriggerBox[1].X2-mob.TriggerBox[1].X1, mob.TriggerBox[0].Y2-mob.TriggerBox[0].Y1)
+
+									for _, obj := range world.Objects {
+										lineIntersectionNumber := game.GetBoxIntersection(newBox, obj.Box)
+										if lineIntersectionNumber != -1 {
+
 										}
-										if difX <= -9 {
-											direction = game.DirectionRight
-										}
-									} else {
-										if difY >= 9 {
-											direction = game.DirectionUp
-										}
-										if difY <= -9 {
-											direction = game.DirectionDown
+										for _, l := range obj.Box {
+											x, y, hasInteraction := game.LineIntersection(targetVector, l)
+											if hasInteraction {
+												interactions = append(interactions, interactionData{
+													x:    x,
+													y:    y,
+													line: l,
+												})
+											}
 										}
 									}
+									if len(interactions) > 0 {
+										closestInteraction := interactions[0]
+										for _, item := range interactions {
+											closestLine := game.Line{
+												X1: mob.X,
+												Y1: mob.Y,
+												X2: closestInteraction.x,
+												Y2: closestInteraction.y,
+											}
+											currLine := game.Line{
+												X1: mob.X,
+												Y1: mob.Y,
+												X2: item.x,
+												Y2: item.y,
+											}
+											if closestLine.Length() > currLine.Length() {
+												closestInteraction = item
+											}
+										}
+
+										closestVertexLine := game.Line{
+											X1: targetVector.X2,
+											Y1: targetVector.Y2,
+											X2: closestInteraction.line.X1,
+											Y2: closestInteraction.line.Y1,
+										}
+
+										secondVertex := game.Line{
+											X1: targetVector.X2,
+											Y1: targetVector.Y2,
+											X2: closestInteraction.line.X2,
+											Y2: closestInteraction.line.Y2,
+										}
+										fmt.Println("closestInteraction", closestInteraction.line)
+										fmt.Println("closestVertexLine", closestVertexLine)
+										fmt.Println("secondVertex", secondVertex)
+										if closestVertexLine.Length() > secondVertex.Length() {
+											closestVertexLine = secondVertex
+										}
+
+										targetVector = game.Line{
+											X1: mob.X,
+											Y1: mob.Y,
+											X2: closestVertexLine.X2,
+											Y2: closestVertexLine.Y2,
+										}
+										// fmt.Println("targetVector", targetVector, targetVector.Length())
+										// targetVector.X2 -= 20 * math.Cos(targetVector.Angle())
+										// targetVector.Y2 -= 20 * math.Sin(targetVector.Angle())
+									}
+									if mob.TriggerBox != nil {
+
+									}
+									fmt.Println("targetVector", targetVector, targetVector.Length())
+
+									direction = game.DirectionVector
+
 									if direction != 0 {
+
 										ev = game.Event{
 											Type: game.PlayerEventMove,
-											Data: game.PlayerMove{
+											Data: game.UnitMove{
 												UnitID:    id,
 												Direction: direction,
+												Angle:     targetVector.Angle(),
 											},
 										}
 
@@ -212,7 +289,7 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 								}
 							}
 						}
-						time.Sleep(time.Millisecond * 50)
+						time.Sleep(time.Millisecond * game.GameSpeedMs)
 					}
 				}
 			}

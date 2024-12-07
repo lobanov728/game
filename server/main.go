@@ -33,17 +33,20 @@ func main() {
 		id := game.UnitID(uuid.New().String())
 
 		actionMap := map[game.EventName]*game.Action{
-			game.ActionHit:       game.NewAction(game.ActionHit, time.Second),
-			game.PlayerEventMove: game.NewAction(game.PlayerEventMove, time.Millisecond*50),
+			game.ActionHit:       game.NewAction(game.ActionHit, time.Second*1),
+			game.PlayerEventMove: game.NewAction(game.PlayerEventMove, time.Millisecond*game.GameSpeedMs),
 		}
+		x := float64(32*i) + 50
+		y := float64(32)
 		world.Units["mob"] = &game.Unit{
 			ID:         id,
-			X:          float64(16 * i),
-			Y:          16,
+			X:          x,
+			Y:          y,
 			SpriteName: skins[rnd.Intn(len(skins))],
 			Action:     game.ActionIdle,
 			Frame:      0,
 			Actions:    actionMap,
+			TriggerBox: game.NewRectBox(x, y, 16, 16),
 		}
 	}
 
@@ -63,10 +66,10 @@ func main() {
 
 	world.Objects["box"] = &game.Unit{
 		ID:         "box",
-		X:          10,
-		Y:          10,
+		X:          0,
+		Y:          0,
 		SpriteName: "",
-		Box:        game.NewRectBox(10, 10, 300, 220),
+		Box:        game.NewRectBox(0, 0, 320, 240),
 	}
 
 	world.Objects["door"] = &game.Unit{
