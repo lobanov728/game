@@ -7,6 +7,21 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+type Line struct {
+	X1 float64 `json:"x1"`
+	Y1 float64 `json:"y1"`
+	X2 float64 `json:"x2"`
+	Y2 float64 `json:"y2"`
+}
+
+func (l *Line) Angle() float64 {
+	return math.Atan2(l.Y2-l.Y1, l.X2-l.X1)
+}
+
+func (l *Line) Length() float64 {
+	return math.Sqrt(math.Pow(l.X2-l.X1, 2) + math.Pow(l.Y2-l.Y1, 2))
+}
+
 type Pointable interface {
 	Points() [][2]float64
 	GetBox() Box

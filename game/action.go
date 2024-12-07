@@ -46,7 +46,7 @@ func (a *Action) GetName() EventName {
 }
 
 func (a *Action) Fire() {
-	fmt.Println("fire", a.name)
+	fmt.Println("Fire", a.name)
 	a.fired = true
 	a.firedTime = time.Now()
 	a.timer.Reset(a.cooldown)
