@@ -7,6 +7,7 @@ import (
 )
 
 func (world *World) HandleEvent(event *Event) {
+	fmt.Println("event.Type", event.Type)
 	switch event.Type {
 	case PlayerEventConnect:
 		str, _ := json.Marshal(event.Data)
@@ -40,18 +41,18 @@ func (world *World) HandleEvent(event *Event) {
 
 		switch ev.Direction {
 		case DirectionUp:
-			newY -= StepSize
+			newY -= PlayerStepSize
 		case DirectionDown:
-			newY += StepSize
+			newY += PlayerStepSize
 		case DirectionRight:
-			newX += StepSize
+			newX += PlayerStepSize
 			unit.HorizontalDirection = ev.Direction
 		case DirectionLeft:
-			newX -= StepSize
+			newX -= PlayerStepSize
 			unit.HorizontalDirection = ev.Direction
 		case DirectionVector:
-			newX += StepSize * math.Cos(ev.Angle)
-			newY += StepSize * math.Sin(ev.Angle)
+			newX += MobStepSize * math.Cos(ev.Angle)
+			newY += MobStepSize * math.Sin(ev.Angle)
 			unit.ActionVector = &Line{
 				X1: unit.X,
 				Y1: unit.Y,

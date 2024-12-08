@@ -189,8 +189,8 @@ func initPlayerConnection(hub *Hub, world *game.World, w http.ResponseWriter, r 
 									}
 									interactions := make([]interactionData, 0)
 
-									newX := mob.X + game.StepSize*math.Cos(targetVector.Angle())
-									newY := mob.Y + game.StepSize*math.Sin(targetVector.Angle())
+									newX := mob.X + game.MobStepSize*math.Cos(targetVector.Angle())
+									newY := mob.Y + game.MobStepSize*math.Sin(targetVector.Angle())
 									newBox := game.NewRectBox(newX, newY, mob.TriggerBox[1].X2-mob.TriggerBox[1].X1, mob.TriggerBox[0].Y2-mob.TriggerBox[0].Y1)
 
 									for _, obj := range world.Objects {
