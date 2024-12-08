@@ -7,17 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-)
 
-const (
-	writeWait = 10 * time.Second
-
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 1) / 10
-
-	maxMessageSize = 512
+	common "github.com/lobanov728/mud/example"
 )
 
 var upgrader = websocket.Upgrader{
@@ -26,14 +17,14 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	r := gin.New()
+	router := gin.New()
 	gin.SetMode(gin.ReleaseMode)
-	r.GET("/ws", func() gin.HandlerFunc {
-		return gin.HandlerFunc(func(c *gin.Context) {
-			conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+
+	router.GET("/"+common.WebsocketRoute, func() gin.HandlerFunc {
+		return gin.HandlerFunc(func(context *gin.Context) {
+			conn, err := upgrader.Upgrade(context.Writer, context.Request, nil)
 			if err != nil {
-				log.Println(err)
-				return
+				log.Fatalf("upgrade: %s", err)
 			}
 
 			go func() {
@@ -41,24 +32,30 @@ func main() {
 					_, message, err := conn.ReadMessage()
 					if err != nil {
 						if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+							// error log
 							fmt.Printf("error: %v", err)
 						}
 
 						break
 					}
+
+					// log
 					fmt.Println("get on server", string(message))
 				}
 			}()
 
 			for {
-				time.Sleep(time.Second)
-				conn.SetWriteDeadline(time.Now().Add(writeWait))
+				// I don't know why we sleep
+				// time.Sleep(time.Second)
+
+				conn.SetWriteDeadline(time.Now().Add(common.WriteWait))
 
 				w, err := conn.NextWriter(websocket.TextMessage)
 				if err != nil {
 					return
 				}
 
+				// log
 				w.Write([]byte("send from server"))
 
 				if err := w.Close(); err != nil {
@@ -69,5 +66,5 @@ func main() {
 		})
 	}())
 
-	r.Run(":3000")
+	router.Run(fmt.Sprintf(":%d", common.Port))
 }
